@@ -57,7 +57,7 @@ class ResqueRepeater_Worker
 	 */
 	public function handleDelayedItems($timestamp = null)
 	{
-		while (($timestamp = ResqueScheduler::nextDelayedTimestamp($timestamp)) !== false) {
+		while (($timestamp = ResqueRepeater::nextDelayedTimestamp($timestamp)) !== false) {
 			$this->updateProcLine('Processing Delayed Items');
 			$this->enqueueDelayedItemsForTimestamp($timestamp);
 		}
@@ -74,7 +74,7 @@ class ResqueRepeater_Worker
 	public function enqueueDelayedItemsForTimestamp($timestamp)
 	{
 		$item = null;
-		while ($item = ResqueScheduler::nextItemForTimestamp($timestamp)) {
+		while ($item = ResqueRepeater::nextItemForTimestamp($timestamp)) {
 			$this->log('queueing ' . $item['class'] . ' in ' . $item['queue'] .' [delayed]');
 			
 			Resque_Event::trigger('beforeDelayedEnqueue', array(
@@ -108,7 +108,7 @@ class ResqueRepeater_Worker
 	private function updateProcLine($status)
 	{
 		if(function_exists('setproctitle')) {
-			setproctitle('resque-scheduler-' . ResqueScheduler::VERSION . ': ' . $status);
+			setproctitle('resque-scheduler-' . ResqueRepeater::VERSION . ': ' . $status);
 		}
 	}
 	
