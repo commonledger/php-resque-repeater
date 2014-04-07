@@ -13,7 +13,9 @@ class ResqueRepeater
 {
 	const VERSION = "0.1";
     const SET_KEY = 'repeat';
-	
+
+    const ZPOP_SCRIPT = 'local job = redis.call("zrangebyscore", KEYS[1], ARGV[1], ARGV[1], "LIMIT", 0, 1); redis.call("zrem", KEYS[1], job[1]); return job[1]';
+
 	/**
 	 * Enqueue a job in a given number of seconds from now.
 	 *
@@ -193,10 +195,13 @@ class ResqueRepeater
 	public static function nextItemForTimestamp($timestamp)
 	{
 		$timestamp = self::getTimestamp($timestamp);
+        $redis = Resque::redis();
 
-        $item = Resque::redis()->zrangebyscore(self::SET_KEY, $timestamp, $timestamp);
+        $key = Resque_Redis::getPrefix() . self::SET_KEY;
+        $item = $redis->eval(self::ZPOP_SCRIPT, array(array($key, $timestamp)), 1);
+
         if(!empty($item)){
-            return json_decode(array_pop($item), true);
+            return json_decode($item, true);
         }
 		
 		return false;
