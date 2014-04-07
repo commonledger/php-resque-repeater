@@ -11,8 +11,8 @@ else if (!class_exists('Resque')) {
 }
 
 // Load resque-scheduler
-require_once dirname(__FILE__) . '/lib/ResqueScheduler.php';
-require_once dirname(__FILE__) . '/lib/ResqueScheduler/Worker.php';
+require_once dirname(__FILE__) . '/lib/ResqueRepeater.php';
+require_once dirname(__FILE__) . '/lib/ResqueRepeater/Worker.php';
 
 $REDIS_BACKEND = getenv('REDIS_BACKEND');
 $REDIS_BACKEND_DB = getenv('REDIS_BACKEND_DB');
@@ -29,10 +29,10 @@ $LOGGING = getenv('LOGGING');
 $VERBOSE = getenv('VERBOSE');
 $VVERBOSE = getenv('VVERBOSE');
 if(!empty($LOGGING) || !empty($VERBOSE)) {
-	$logLevel = ResqueScheduler_Worker::LOG_NORMAL;
+	$logLevel = ResqueRepeater_Worker::LOG_NORMAL;
 }
 else if(!empty($VVERBOSE)) {
-	$logLevel = ResqueScheduler_Worker::LOG_VERBOSE;
+	$logLevel = ResqueRepeater_Worker::LOG_VERBOSE;
 }
 
 // Check for jobs every $interval seconds
@@ -58,7 +58,7 @@ if(!empty($PREFIX)) {
     Resque_Redis::prefix($PREFIX);
 }
 
-$worker = new ResqueScheduler_Worker();
+$worker = new ResqueRepeater_Worker();
 $worker->logLevel = $logLevel;
 
 $PIDFILE = getenv('PIDFILE');

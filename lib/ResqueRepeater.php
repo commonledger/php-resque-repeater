@@ -1,15 +1,18 @@
 <?php
 /**
-* ResqueScheduler core class to handle scheduling of jobs in the future.
-*
-* @package		ResqueScheduler
-* @author		Chris Boulton <chris@bigcommerce.com>
-* @copyright	(c) 2012 Chris Boulton
-* @license		http://www.opensource.org/licenses/mit-license.php
-*/
-class ResqueScheduler
+ * ResqueRepeater - managing recurring/repeating jobs in resque
+ *
+ * Based on the php-resque-scheduler library by Chris Boulton
+ *
+ * @package		ResqueRepeater
+ * @author		API Team <api@commonledger.com>
+ * @copyright	(c) 2014 Common Ledger
+ * @license		http://www.opensource.org/licenses/mit-license.php
+ */
+class ResqueRepeater
 {
 	const VERSION = "0.1";
+    const SET_KEY = 'repeat';
 	
 	/**
 	 * Enqueue a job in a given number of seconds from now.
@@ -46,7 +49,7 @@ class ResqueScheduler
 		$job = self::jobToHash($queue, $class, $args);
 		self::delayedPush($at, $job);
 		
-		Resque_Event::trigger('afterSchedule', array(
+		Resque_Event::trigger('afterRepeatSchedule', array(
 			'at'    => $at,
 			'queue' => $queue,
 			'class' => $class,
@@ -64,9 +67,7 @@ class ResqueScheduler
 	{
 		$timestamp = self::getTimestamp($timestamp);
 		$redis = Resque::redis();
-		$redis->rpush('delayed:' . $timestamp, json_encode($item));
-
-		$redis->zadd('delayed_queue_schedule', $timestamp, $timestamp);
+		$redis->zadd(self::SET_KEY, $timestamp, json_encode($item));
 	}
 
 	/**
@@ -76,7 +77,7 @@ class ResqueScheduler
 	 */
 	public static function getDelayedQueueScheduleSize()
 	{
-		return (int)Resque::redis()->zcard('delayed_queue_schedule');
+		return (int)Resque::redis()->zcard(self::SET_KEY);
 	}
 
 	/**
@@ -88,7 +89,7 @@ class ResqueScheduler
 	public static function getDelayedTimestampSize($timestamp)
 	{
 		$timestamp = self::toTimestamp($timestamp);
-		return Resque::redis()->llen('delayed:' . $timestamp, $timestamp);
+		return Resque::redis()->zcount(self::SET_KEY, $timestamp, $timestamp);
 	}
 
     /**
@@ -108,43 +109,13 @@ class ResqueScheduler
      */
     public static function removeDelayed($queue, $class, $args)
     {
-       $destroyed=0;
-       $item=json_encode(self::jobToHash($queue, $class, $args));
-       $redis=Resque::redis();
+        $item=json_encode(self::jobToHash($queue, $class, $args));
+        $redis=Resque::redis();
 
-       foreach($redis->keys('delayed:*') as $key)
-       {
-           $key=$redis->removePrefix($key);
-           $destroyed+=$redis->lrem($key,0,$item);
-       }
-
-       return $destroyed;
+        $destroyed = $redis->zrem(self::SET_KEY, $item);
+        return $destroyed;
     }
 
-    /**
-     * removed a delayed job queued for a specific timestamp
-     *
-     * note: you must specify exactly the same
-     * queue, class and arguments that you used when you added
-     * to the delayed queue
-     *
-     * @param $timestamp
-     * @param $queue
-     * @param $class
-     * @param $args
-     * @return mixed
-     */
-    public static function removeDelayedJobFromTimestamp($timestamp, $queue, $class, $args)
-    {
-        $key = 'delayed:' . self::getTimestamp($timestamp);
-        $item = json_encode(self::jobToHash($queue, $class, $args));
-        $redis = Resque::redis();
-        $count = $redis->lrem($key, 0, $item);
-        self::cleanupTimestamp($key, $timestamp);
-
-        return $count;
-    }
-	
 	/**
 	 * Generate hash of all job properties to be saved in the scheduled queue.
 	 *
@@ -160,26 +131,6 @@ class ResqueScheduler
 			'args'  => array($args),
 			'queue' => $queue,
 		);
-	}
-
-	/**
-	 * If there are no jobs for a given key/timestamp, delete references to it.
-	 *
-	 * Used internally to remove empty delayed: items in Redis when there are
-	 * no more jobs left to run at that timestamp.
-	 *
-	 * @param string $key Key to count number of items at.
-	 * @param int $timestamp Matching timestamp for $key.
-	 */
-	private static function cleanupTimestamp($key, $timestamp)
-	{
-		$timestamp = self::getTimestamp($timestamp);
-		$redis = Resque::redis();
-
-		if ($redis->llen($key) == 0) {
-			$redis->del($key);
-			$redis->zrem('delayed_queue_schedule', $timestamp);
-		}
 	}
 
 	/**
@@ -225,9 +176,9 @@ class ResqueScheduler
 			$at = self::getTimestamp($at);
 		}
 	
-		$items = Resque::redis()->zrangebyscore('delayed_queue_schedule', '-inf', $at, array('limit' => array(0, 1)));
+		$items = Resque::redis()->zrangebyscore(self::SET_KEY, '-inf', $at, array(array('withscores' => true, 'limit' => array(0, 1))));
 		if (!empty($items)) {
-			return $items[0];
+			return array_pop($items);
 		}
 		
 		return false;
@@ -242,12 +193,13 @@ class ResqueScheduler
 	public static function nextItemForTimestamp($timestamp)
 	{
 		$timestamp = self::getTimestamp($timestamp);
-		$key = 'delayed:' . $timestamp;
+
+        $item = Resque::redis()->zrangebyscore(self::SET_KEY, $timestamp, $timestamp);
+        if(!empty($item)){
+            return json_decode(array_pop($item), true);
+        }
 		
-		$item = json_decode(Resque::redis()->lpop($key), true);
-		
-		self::cleanupTimestamp($key, $timestamp);
-		return $item;
+		return false;
 	}
 
 	/**

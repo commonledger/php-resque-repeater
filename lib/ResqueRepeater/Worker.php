@@ -1,13 +1,15 @@
 <?php
 /**
- * ResqueScheduler worker to handle scheduling of delayed tasks.
+ * ResqueRepeater - managing recurring/repeating jobs in resque
  *
- * @package		ResqueScheduler
- * @author		Chris Boulton <chris@bigcommerce.com>
- * @copyright	(c) 2012 Chris Boulton
+ * Based on the php-resque-scheduler library by Chris Boulton
+ *
+ * @package		ResqueRepeater
+ * @author		API Team <api@commonledger.com>
+ * @copyright	(c) 2014 Common Ledger
  * @license		http://www.opensource.org/licenses/mit-license.php
  */
-class ResqueScheduler_Worker
+class ResqueRepeater_Worker
 {
 	const LOG_NONE = 0;
 	const LOG_NORMAL = 1;

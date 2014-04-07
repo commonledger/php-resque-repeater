@@ -1,16 +1,16 @@
 {
-	"name": "chrisboulton/php-resque-scheduler",
+	"name": "commonledger/php-resque-repeater",
 	"type": "library",
-	"description": "php-resque-scheduler is a PHP port of resque-scheduler, which adds support for scheduling items in the future to Resque.",
+	"description": "php-resque-repeater is a fork of php-resque-scheduler, designed to manage repeating jobs in resque",
 	"authors": [
 		{
-			"name": "Chris Boulton",
-			"email": "chris@bgigcommerce.com"
+			"name": "API Team",
+			"email": "api@commonledger.com"
 		}
 	],
 	"autoload": {
 		"psr-0": {
-			"ResqueScheduler": "lib/"
+			"ResqueRepeater": "lib/"
 		}
 	},
 	"repositories": [
