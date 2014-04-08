@@ -14,6 +14,7 @@ class ResqueRepeater_Worker
 	const LOG_NONE = 0;
 	const LOG_NORMAL = 1;
 	const LOG_VERBOSE = 2;
+    const LOG_VVERBOSE = 3;
 	
 	/**
 	 * @var int Current log level of this worker.
@@ -57,7 +58,8 @@ class ResqueRepeater_Worker
 	 */
 	public function handleDelayedItems($timestamp = null)
 	{
-		while (($timestamp = ResqueRepeater::nextDelayedTimestamp($timestamp)) !== false) {
+        $this->log('checking for repeating items to be executed', self::LOG_VVERBOSE);
+        while (($timestamp = ResqueRepeater::nextDelayedTimestamp($timestamp)) !== false) {
 			$this->updateProcLine('Processing Delayed Items');
 			$this->enqueueDelayedItemsForTimestamp($timestamp);
 		}
@@ -117,12 +119,14 @@ class ResqueRepeater_Worker
 	 *
 	 * @param string $message Message to output.
 	 */
-	public function log($message)
+	public function log($message, $level = self::LOG_NORMAL)
 	{
+        if($this->logLevel > $level) return;
+
 		if($this->logLevel == self::LOG_NORMAL) {
 			fwrite(STDOUT, "*** " . $message . "\n");
 		}
-		else if($this->logLevel == self::LOG_VERBOSE) {
+		else if($this->logLevel >= self::LOG_VERBOSE) {
 			fwrite(STDOUT, "** [" . strftime('%T %Y-%m-%d') . "] " . $message . "\n");
 		}
 	}
