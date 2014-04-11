@@ -121,7 +121,7 @@ class ResqueRepeater_Worker
 	 */
 	public function log($message, $level = self::LOG_NORMAL)
 	{
-        if($this->logLevel > $level) return;
+        if($this->logLevel < $level) return;
 
 		if($this->logLevel == self::LOG_NORMAL) {
 			fwrite(STDOUT, "*** " . $message . "\n");
