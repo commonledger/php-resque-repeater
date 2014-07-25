@@ -198,7 +198,7 @@ class ResqueRepeater
         $redis = Resque::redis();
 
         $key = Resque_Redis::getPrefix() . self::SET_KEY;
-        $item = $redis->eval(self::ZPOP_SCRIPT, array(array($key, $timestamp)), 1);
+        $item = $redis->eval(self::ZPOP_SCRIPT, array($key), array($timestamp));
 
         if(!empty($item)){
             return json_decode($item, true);
